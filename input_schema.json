@@ -1,72 +1,88 @@
 {
-  "title": "Amazon Search & Product Scraper",
-  "type": "object",
-  "schemaVersion": 1,
-  "properties": {
-    "keywords": {
+  "description": "Searches Amazon by keywords and returns product list data (ASIN, title, price, rating, etc.) for US, UK, DE, FR, JP. Results can be filtered by rating, reviews, and sponsored; optional detail-page fetch for category and features.",
+  "b": "keywords",
+  "properties": [
+    {
       "title": "Keywords",
+      "name": "keywords",
       "type": "array",
-      "description": "Search keywords, e.g. [\"iphone case\", \"usb c hub\"]",
-      "items": { "type": "string" },
-      "default": ["iphone 17 case"]
+      "editor": "stringList",
+      "description": "Search terms, e.g. iphone case, usb c hub. One or more keywords.",
+      "default": [
+        { "string": "iphone 17 case" }
+      ],
+      "required": true
     },
-    "max_items_per_keyword": {
-      "title": "Max items per keyword",
-      "type": "integer",
-      "description": "Maximum products to scrape per keyword",
-      "default": 50,
-      "minimum": 1,
-      "maximum": 500
-    },
-    "max_pages": {
-      "title": "Max pages per keyword",
-      "type": "integer",
-      "description": "Maximum result pages per keyword (1–20)",
-      "default": 3,
-      "minimum": 1,
-      "maximum": 20
-    },
-    "country": {
+    {
       "title": "Marketplace",
+      "name": "country",
       "type": "string",
-      "description": "Amazon site: US, UK, DE, FR, JP",
-      "default": "US",
-      "enum": ["US", "UK", "DE", "FR", "JP"],
-      "enumTitles": ["United States", "United Kingdom", "Germany", "France", "Japan"]
+      "editor": "select",
+      "description": "Amazon site to scrape.",
+      "options": [
+        { "label": "United States", "value": "US" },
+        { "label": "United Kingdom", "value": "UK" },
+        { "label": "Germany", "value": "DE" },
+        { "label": "France", "value": "FR" },
+        { "label": "Japan", "value": "JP" }
+      ],
+      "default": "US"
     },
-    "min_rating": {
+    {
+      "title": "Max items per keyword",
+      "name": "max_items_per_keyword",
+      "type": "integer",
+      "editor": "number",
+      "description": "Maximum products to scrape per keyword (1–500).",
+      "default": 50
+    },
+    {
+      "title": "Max pages per keyword",
+      "name": "max_pages",
+      "type": "integer",
+      "editor": "number",
+      "description": "Maximum result pages per keyword (1–20).",
+      "default": 3
+    },
+    {
       "title": "Min rating",
+      "name": "min_rating",
       "type": "number",
-      "description": "Filter out products with lower rating; 0 = no filter",
+      "editor": "number",
+      "description": "Filter out products with lower rating; 0 = no filter.",
       "default": 0
     },
-    "min_reviews": {
+    {
       "title": "Min reviews",
+      "name": "min_reviews",
       "type": "integer",
-      "description": "Filter out products with fewer reviews; 0 = no filter",
-      "default": 0,
-      "minimum": 0
+      "editor": "number",
+      "description": "Filter out products with fewer reviews; 0 = no filter.",
+      "default": 0
     },
-    "exclude_sponsored": {
+    {
       "title": "Exclude sponsored",
+      "name": "exclude_sponsored",
       "type": "boolean",
-      "description": "Exclude sponsored products",
+      "editor": "switch",
+      "description": "Exclude sponsored products from results.",
       "default": false
     },
-    "fetch_details": {
+    {
       "title": "Fetch detail pages",
+      "name": "fetch_details",
       "type": "boolean",
-      "description": "Open product detail pages for first N items (category, features)",
+      "editor": "switch",
+      "description": "Open product detail pages for first N items to get category path and feature bullets.",
       "default": false
     },
-    "max_detail_items": {
+    {
       "title": "Max detail items per keyword",
+      "name": "max_detail_items",
       "type": "integer",
-      "description": "Max products to open detail page for (when fetch_details is true)",
-      "default": 5,
-      "minimum": 1,
-      "maximum": 50
+      "editor": "number",
+      "description": "Max products to open detail page for when Fetch detail pages is on (1–50).",
+      "default": 5
     }
-  },
-  "required": ["keywords"]
+  ]
 }

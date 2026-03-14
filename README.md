@@ -32,9 +32,9 @@ Each row includes: keyword, country, pageIndex, asin, title, productUrl, priceTe
 
 The platform runs `python main.py` and supplies input via the SDK. Proxy is optional via `PROXY_AUTH` (e.g. `socks5://{PROXY_AUTH}@proxy-inner.cafescraper.com:6000`).
 
-**Playwright browsers:** The script tries to run `playwright install chromium` once at start. If the run environment has no network or no write access to the cache dir, the platform must run `playwright install chromium` (or add a build step that does) before starting the task.
+**Playwright browsers:** The script installs Chromium to `/tmp/playwright_browsers` at start (so it works in read-only `/root/.cache`). If the run environment has no network, the platform must run `playwright install chromium` before the task (e.g. in a build step). If it still fails, ask CafeScraper support to add that step or use an image with Chromium preinstalled.
 
-**Minimal input:** If the platform only sends e.g. `{"version": "v1.0.1"}` or only a country, the worker uses default keywords and settings (see `DEFAULT_INPUT` in `main.py`). Full input can include: `keywords`, `country`, `max_pages`, `max_items_per_keyword`, `min_rating`, `min_reviews`, `exclude_sponsored`, `fetch_details`, `max_detail_items`.
+**Input / input_schema:** CafeScraper may not use our `input_schema.json` format (their UI often shows only Execution Node, Version, Timeout, Memory). We use defaults when the platform sends minimal input (see `DEFAULT_INPUT` in `main.py`). To pass keywords or country, use whatever input form CafeScraper provides, or ask them for the correct schema format.
 
 ## Anti-bot
 

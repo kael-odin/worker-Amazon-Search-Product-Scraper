@@ -6,6 +6,7 @@ Accepts log adapter and push_data callback.
 from __future__ import annotations
 
 import asyncio
+import os
 import random
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -324,18 +325,25 @@ async def run_scraper(
     launch_kwargs.setdefault("args", ["--disable-gpu"])
     locale = {"US": "en-US", "UK": "en-GB", "DE": "de-DE", "FR": "fr-FR", "JP": "ja-JP"}.get(parsed.country, "en-US")
 
-    # Ensure Playwright Chromium is installed (e.g. when platform only ran pip install)
+    # Install Chromium to a writable path (containers often can't write to /root/.cache)
     import subprocess
     import sys
+    browsers_dir = "/tmp/playwright_browsers"
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browsers_dir
     try:
-        subprocess.run(
+        r = subprocess.run(
             [sys.executable, "-m", "playwright", "install", "chromium"],
+            env={**os.environ, "PLAYWRIGHT_BROWSERS_PATH": browsers_dir},
             capture_output=True,
-            timeout=120,
+            timeout=180,
             check=False,
         )
-    except Exception:
-        pass
+        if r.returncode == 0:
+            log.info("Playwright Chromium install OK")
+        else:
+            log.warning(f"Playwright install exit {r.returncode}; stderr: {(r.stderr or b'').decode()[:500]}")
+    except Exception as e:
+        log.warning(f"Playwright install attempt failed: {e}")
 
     async with async_playwright() as p:
         try:
@@ -344,7 +352,7 @@ async def run_scraper(
             err = str(e)
             if "Executable doesn't exist" in err or "playwright install" in err.lower():
                 log.exception(
-                    "Playwright Chromium not found. The run environment must execute: playwright install chromium"
+                    "Chromium not found. CafeScraper run environment must run before task: playwright install chromium"
                 )
             raise
         ctx_opts = {

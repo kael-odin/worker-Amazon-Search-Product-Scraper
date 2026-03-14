@@ -67,7 +67,11 @@ async def run():
     try:
         raw = CafeSDK.Parameter.get_input_json_dict() or {}
         input_json_dict = {**DEFAULT_INPUT, **{k: v for k, v in raw.items() if k != "version"}}
-        if not raw.get("keywords"):
+        # CafeScraper stringList sends keywords as [{"string": "a"}, {"string": "b"}]
+        kw = input_json_dict.get("keywords") or []
+        if kw and isinstance(kw, list) and isinstance(kw[0], dict) and "string" in (kw[0] or {}):
+            input_json_dict["keywords"] = [x.get("string", "").strip() for x in kw if x and x.get("string")]
+        if not input_json_dict.get("keywords"):
             CafeSDK.Log.info("No keywords in input; using default keywords and settings.")
         CafeSDK.Log.debug(f"params: {input_json_dict}")
 
