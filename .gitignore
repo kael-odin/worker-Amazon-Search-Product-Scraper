@@ -163,5 +163,5 @@ cython_debug/
 #  to share Project Settings within a team
 .zed
 
-# Added by Apify CLI
-node_modules
+# Local reference / docs (not part of worker)
+cafescraper-pythonscirptdemo*.txt

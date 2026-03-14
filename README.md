@@ -1,88 +1,37 @@
-## Amazon Search & Product Scraper (Python + Playwright)
+# Amazon Search & Product Scraper
 
-This project can run as:
+CafeScraper worker that searches Amazon by keywords and returns product list data (ASIN, title, price, rating, etc.) for analysis or export.
 
-1. **Apify Actor** – entry point `src/main.py` (use `apify run`).
-2. **CafeScraper Worker** – entry point **`main.py`** in project root; uses `sdk.py`, `sdk_pb2.py`, `sdk_pb2_grpc.py` for params, logging, and result push.
+## Required files (project root)
 
-The scraper searches Amazon for given keywords and extracts product list data that is ready for analysis or export.
+| File | Purpose |
+|------|--------|
+| `main.py` | Entry point |
+| `scraper.py` | Scraping logic |
+| `requirements.txt` | Python dependencies |
+| `input_schema.json` | Input form config |
+| `README.md` | This file |
+| `sdk.py`, `sdk_pb2.py`, `sdk_pb2_grpc.py` | CafeScraper SDK |
 
-Typical use cases:
+## Input
 
-- Product research for marketplaces (e.g. `iphone 17 case`, `usb c hub`, `gaming chair`)
-- Competitor and price monitoring across multiple Amazon marketplaces
-- Feeding product lists into further analytics, dashboards, or LLM pipelines
+- **keywords** (required): list of search terms, e.g. `["iphone case", "usb c hub"]`
+- **max_items_per_keyword** (default 50): max products per keyword
+- **max_pages** (default 3): max result pages per keyword (1–20)
+- **country** (default US): marketplace — US, UK, DE, FR, JP
+- **min_rating** / **min_reviews**: optional filters; 0 = no filter
+- **exclude_sponsored** (default false): drop sponsored results
+- **fetch_details** (default false): open detail pages for first N items to get category path and feature bullets
+- **max_detail_items** (default 5): N when fetch_details is true
 
-### Input
+## Output
 
-The input is defined in `.actor/input_schema.json` and exposed in Apify Console:
+Each row includes: keyword, country, pageIndex, asin, title, productUrl, priceText, price, originalPriceText, rating, reviewsCount, isPrime, brand, badges, isSponsored, imageUrl, currency; optionally categoryPath and featureBullets when fetch_details is enabled.
 
-- `keywords` (array of strings, **required**)  
-  List of search keywords, e.g. `["iphone 17 case", "usb c hub"]`.
-- `max_items_per_keyword` (integer, default `50`)  
-  Maximum number of products to scrape for each keyword.
-- `max_pages` (integer, default `3`)  
-  Maximum number of result pages to crawl for each keyword (1–20).
-- `country` (string, default `"US"`)  
-  Amazon marketplace to target: one of `US`, `UK`, `DE`, `FR`, `JP`.
-- `min_rating` (number, default `0`)  
-  If > 0, products with rating lower than this value are filtered out.
-- `min_reviews` (integer, default `0`)  
-  If > 0, products with fewer reviews than this value are filtered out.
-- `exclude_sponsored` (boolean, default `false`)  
-  If `true`, sponsored products are excluded from the results.
-- `fetch_details` (boolean, default `false`)  
-  If `true`, the Actor will open product detail pages for the first `max_detail_items` results per keyword to enrich data (e.g. category path).
-- `max_detail_items` (integer, default `5`)  
-  Maximum number of products per keyword for which to open detail pages when `fetch_details` is enabled.
+## Run
 
-### Output
+The platform runs `python main.py` and supplies input via the SDK. Proxy is optional via `PROXY_AUTH` (e.g. `socks5://{PROXY_AUTH}@proxy-inner.cafescraper.com:6000`).
 
-Results are pushed to the default dataset. Each item contains (non‑exhaustive):
+## Anti-bot
 
-- `keyword`, `country`, `pageIndex`
-- `asin`, `title`, `brand`, `productUrl`, `imageUrl`
-- `price`, `priceText`, `originalPriceText`, `currency`
-- `rating`, `reviewsCount`, `isPrime`, `isSponsored`, `badges`
-- Optional when `fetch_details=true`: `categoryPath`, `featureBullets`
-
-The dataset view is configured in `.actor/dataset_schema.json` so that the **Overview** table shows the most important fields directly in Apify Console.
-
-### Running locally
-
-**As Apify Actor** (from project root):
-
-```bash
-apify run
-```
-
-The default local input is stored in `storage/key_value_stores/default/INPUT.json`.  
-You can edit it to test different keywords, marketplaces and filters.
-
-**As CafeScraper Worker** (from project root):
-
-- Required files in root: `main.py`, `requirements.txt`, `input_schema.json`, `README.md`, `sdk.py`, `sdk_pb2.py`, `sdk_pb2_grpc.py`.
-- The platform supplies input via SDK and may set `PROXY_AUTH` for proxy; results are pushed via `CafeSDK.Result.set_table_header` and `CafeSDK.Result.push_data`.
-- Run: `python main.py` (with input/proxy provided by the CafeScraper environment).
-
-### Anti‑bot considerations
-
-Amazon employs strong anti‑bot protections. This Actor includes:
-
-- Realistic desktop browser profile (user agent, viewport, locale)
-- Short navigation timeouts with retries and basic backoff
-- Simple detection of common CAPTCHA / bot‑check pages
-
-For production runs on Apify, it is strongly recommended to:
-
-- Enable Apify Proxy and use residential or high‑quality datacenter IPs
-- Keep concurrency reasonable (e.g. 1–3 browser contexts) to avoid rate limits
-
-### Future extensions
-
-Planned improvements before public release:
-
-- Additional fields (brand, badges, delivery info) when consistently available
-- More robust selectors & fallbacks for Amazon UI changes
-- Optional export helpers (e.g. sorting, filtering presets for typical workflows)
-
+Amazon uses strong anti-bot measures. This worker uses a realistic browser profile and basic CAPTCHA detection. For production, use the platform’s proxy and keep concurrency low.
