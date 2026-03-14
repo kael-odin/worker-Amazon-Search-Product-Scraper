@@ -32,7 +32,7 @@ Each row includes: keyword, country, pageIndex, asin, title, productUrl, priceTe
 
 The platform runs `python main.py` and supplies input via the SDK. Proxy is optional via `PROXY_AUTH` (e.g. `socks5://{PROXY_AUTH}@proxy-inner.cafescraper.com:6000`).
 
-**Playwright browsers:** The script installs Chromium to `/tmp/playwright_browsers` at start (so it works in read-only `/root/.cache`). If the run environment has no network, the platform must run `playwright install chromium` before the task (e.g. in a build step). If it still fails, ask CafeScraper support to add that step or use an image with Chromium preinstalled.
+**Playwright / Chromium:** The script first tries to use a system Chromium or Chrome if present (`chromium`, `chromium-browser`, `google-chrome` in PATH). If none is found, it tries to run `playwright install chromium` into `/tmp/playwright_browsers`. If you still see "Executable doesn't exist", the run environment has no browser and no network to download one — **contact CafeScraper support** and ask them to either run `playwright install chromium` before tasks (e.g. in a build step) or use a Docker image that has Chromium/Chrome preinstalled.
 
 **Input / input_schema:** CafeScraper may not use our `input_schema.json` format (their UI often shows only Execution Node, Version, Timeout, Memory). We use defaults when the platform sends minimal input (see `DEFAULT_INPUT` in `main.py`). To pass keywords or country, use whatever input form CafeScraper provides, or ask them for the correct schema format.
 

@@ -325,25 +325,33 @@ async def run_scraper(
     launch_kwargs.setdefault("args", ["--disable-gpu"])
     locale = {"US": "en-US", "UK": "en-GB", "DE": "de-DE", "FR": "fr-FR", "JP": "ja-JP"}.get(parsed.country, "en-US")
 
-    # Install Chromium to a writable path (containers often can't write to /root/.cache)
-    import subprocess
-    import sys
-    browsers_dir = "/tmp/playwright_browsers"
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browsers_dir
-    try:
-        r = subprocess.run(
-            [sys.executable, "-m", "playwright", "install", "chromium"],
-            env={**os.environ, "PLAYWRIGHT_BROWSERS_PATH": browsers_dir},
-            capture_output=True,
-            timeout=180,
-            check=False,
-        )
-        if r.returncode == 0:
-            log.info("Playwright Chromium install OK")
-        else:
-            log.warning(f"Playwright install exit {r.returncode}; stderr: {(r.stderr or b'').decode()[:500]}")
-    except Exception as e:
-        log.warning(f"Playwright install attempt failed: {e}")
+    # Prefer system Chromium/Chrome if present (many images have it; Playwright install often fails without network)
+    import shutil
+    for name in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "chrome"):
+        path = shutil.which(name)
+        if path:
+            launch_kwargs["executable_path"] = path
+            log.info(f"Using system browser: {path}")
+            break
+    if "executable_path" not in launch_kwargs:
+        import subprocess
+        import sys
+        browsers_dir = "/tmp/playwright_browsers"
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browsers_dir
+        try:
+            r = subprocess.run(
+                [sys.executable, "-m", "playwright", "install", "chromium"],
+                env={**os.environ, "PLAYWRIGHT_BROWSERS_PATH": browsers_dir},
+                capture_output=True,
+                timeout=180,
+                check=False,
+            )
+            if r.returncode == 0:
+                log.info("Playwright Chromium install OK")
+            else:
+                log.warning(f"Playwright install exit {r.returncode}; stderr: {(r.stderr or b'').decode()[:500]}")
+        except Exception as e:
+            log.warning(f"Playwright install attempt failed: {e}")
 
     async with async_playwright() as p:
         try:
@@ -352,7 +360,7 @@ async def run_scraper(
             err = str(e)
             if "Executable doesn't exist" in err or "playwright install" in err.lower():
                 log.exception(
-                    "Chromium not found. CafeScraper run environment must run before task: playwright install chromium"
+                    "Chromium not found. Ask CafeScraper support to run 'playwright install chromium' before tasks or use an image with Chromium/Chrome installed."
                 )
             raise
         ctx_opts = {
