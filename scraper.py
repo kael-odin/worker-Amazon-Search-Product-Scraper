@@ -403,10 +403,12 @@ async def run_scraper(
             ctx_opts["proxy"] = {"server": proxy}
 
     async with async_playwright() as p:
+        is_cdp_browser = False
         if browser_cdp_url:
             log.info("Connecting to CafeScraper fingerprint browser via CDP")
             try:
                 browser = await p.chromium.connect_over_cdp(browser_cdp_url)
+                is_cdp_browser = True
             except Exception as e:
                 log.exception(f"Failed to connect to fingerprint browser: {e}")
                 raise
@@ -432,4 +434,6 @@ async def run_scraper(
                 )
         finally:
             await context.close()
-            await browser.close()
+            # Don't close CDP browser - it's managed by CafeScraper platform
+            if not is_cdp_browser:
+                await browser.close()
