@@ -68,15 +68,29 @@ async def run():
     try:
         raw = CafeSDK.Parameter.get_input_json_dict() or {}
         
-        # Parse keywords from stringList format first (before merging defaults)
+        # CafeScraper stringList handling:
+        # 1. If keywords is stringList format: [{"string": "value"}]
+        # 2. Platform may also inject a "string" field with the first value
+        # 3. Platform may merge default keywords incorrectly
+        
         kw = raw.get("keywords") or []
+        parsed_keywords = []
+        
+        # Check if keywords is in stringList format
         if kw and isinstance(kw, list) and len(kw) > 0:
             first_kw = kw[0]
             if isinstance(first_kw, dict) and "string" in first_kw:
                 # stringList format: [{"string": "keyword"}]
-                raw["keywords"] = [x.get("string", "").strip() for x in kw if isinstance(x, dict) and x.get("string")]
+                parsed_keywords = [x.get("string", "").strip() for x in kw if isinstance(x, dict) and x.get("string")]
         
-        # Remove platform-injected fields that shouldn't be merged
+        # If keywords were parsed from stringList, use them
+        if parsed_keywords:
+            raw["keywords"] = parsed_keywords
+        elif "string" in raw and raw["string"]:
+            # Fallback: use the "string" field if keywords parsing failed
+            raw["keywords"] = [raw["string"].strip()]
+        
+        # Remove platform-injected fields
         raw.pop("string", None)
         raw.pop("version", None)
         
