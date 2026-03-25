@@ -1,87 +1,87 @@
 {
-  "description": "Searches Amazon by keywords and returns product list data (ASIN, title, price, rating, etc.) for US, UK, DE, FR, JP. Results can be filtered by rating, reviews, and sponsored; optional detail-page fetch for category and features.",
+  "description": "Searches Amazon by keywords and returns product list data (ASIN, title, price, rating, etc.) for US, UK, DE, FR, JP. Results can be filtered by rating, reviews, and sponsored; optional detail-page fetch for category and features. | 通过关键词搜索亚马逊，返回产品列表数据（ASIN、标题、价格、评分等），支持 US、UK、DE、FR、JP 站点。可按评分、评论数、赞助过滤，可选获取详情页的分类和特性。",
   "b": "keywords",
   "properties": [
     {
-      "title": "Keywords",
+      "title": "Keywords | 关键词",
       "name": "keywords",
       "type": "array",
       "editor": "stringList",
-      "description": "Search terms, e.g. iphone case, usb c hub. One or more keywords.",
+      "description": "Search terms, e.g. iphone case, usb c hub. One or more keywords. | 搜索词，如 iphone case、usb c hub，支持一个或多个关键词。",
       "default": [
         { "string": "iphone 17 case" }
       ],
       "required": true
     },
     {
-      "title": "Marketplace",
+      "title": "Marketplace | 市场",
       "name": "country",
       "type": "string",
       "editor": "select",
-      "description": "Amazon site to scrape.",
+      "description": "Amazon site to scrape. | 要抓取的亚马逊站点。",
       "options": [
-        { "label": "United States", "value": "US" },
-        { "label": "United Kingdom", "value": "UK" },
-        { "label": "Germany", "value": "DE" },
-        { "label": "France", "value": "FR" },
-        { "label": "Japan", "value": "JP" }
+        { "label": "United States | 美国", "value": "US" },
+        { "label": "United Kingdom | 英国", "value": "UK" },
+        { "label": "Germany | 德国", "value": "DE" },
+        { "label": "France | 法国", "value": "FR" },
+        { "label": "Japan | 日本", "value": "JP" }
       ],
       "default": "US"
     },
     {
-      "title": "Max items per keyword",
+      "title": "Max Items per Keyword | 每个关键词最大商品数",
       "name": "max_items_per_keyword",
       "type": "integer",
       "editor": "number",
-      "description": "Maximum products to scrape per keyword (1–500).",
+      "description": "Maximum products to scrape per keyword (1–500). | 每个关键词抓取的最大商品数（1-500）。",
       "default": 50
     },
     {
-      "title": "Max pages per keyword",
+      "title": "Max Pages per Keyword | 每个关键词最大页数",
       "name": "max_pages",
       "type": "integer",
       "editor": "number",
-      "description": "Maximum result pages per keyword (1–20).",
+      "description": "Maximum result pages per keyword (1–20). | 每个关键词的最大结果页数（1-20）。",
       "default": 3
     },
     {
-      "title": "Min rating",
+      "title": "Min Rating | 最低评分",
       "name": "min_rating",
-      "type": "number",
+      "type": "integer",
       "editor": "number",
-      "description": "Filter out products with lower rating; 0 = no filter.",
+      "description": "Filter out products with lower rating; 0 = no filter. | 过滤评分低于此值的产品；0=不过滤。",
       "default": 0
     },
     {
-      "title": "Min reviews",
+      "title": "Min Reviews | 最低评论数",
       "name": "min_reviews",
       "type": "integer",
       "editor": "number",
-      "description": "Filter out products with fewer reviews; 0 = no filter.",
+      "description": "Filter out products with fewer reviews; 0 = no filter. | 过滤评论数低于此值的产品；0=不过滤。",
       "default": 0
     },
     {
-      "title": "Exclude sponsored",
+      "title": "Exclude Sponsored | 排除赞助商品",
       "name": "exclude_sponsored",
       "type": "boolean",
       "editor": "switch",
-      "description": "Exclude sponsored products from results.",
+      "description": "Exclude sponsored products from results. | 从结果中排除赞助商品。",
       "default": false
     },
     {
-      "title": "Fetch detail pages",
+      "title": "Fetch Detail Pages | 获取详情页",
       "name": "fetch_details",
       "type": "boolean",
       "editor": "switch",
-      "description": "Open product detail pages for first N items to get category path and feature bullets.",
+      "description": "Open product detail pages for first N items to get category path and feature bullets. | 打开前 N 个商品的详情页以获取分类路径和特性列表。",
       "default": false
     },
     {
-      "title": "Max detail items per keyword",
+      "title": "Max Detail Items | 最大详情商品数",
       "name": "max_detail_items",
       "type": "integer",
       "editor": "number",
-      "description": "Max products to open detail page for when Fetch detail pages is on (1–50).",
+      "description": "Max products to open detail page for when Fetch detail pages is on (1–50). | 开启详情页抓取时，最多打开多少个商品的详情页（1-50）。",
       "default": 5
     }
   ]

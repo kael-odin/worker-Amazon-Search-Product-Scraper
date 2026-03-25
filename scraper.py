@@ -13,6 +13,13 @@ from typing import Any, Callable, Dict, List, Optional
 
 from playwright.async_api import BrowserContext, Locator, TimeoutError as PlaywrightTimeoutError, async_playwright
 
+# Stealth mode to avoid bot detection
+try:
+    from playwright_stealth import stealth_async
+    HAS_STEALTH = True
+except ImportError:
+    HAS_STEALTH = False
+
 
 @dataclass
 class AmazonSearchInput:
@@ -134,14 +141,45 @@ async def _parse_single_card(
                 rating_value = float(rating_text.split()[0].replace(",", "."))
             except (ValueError, IndexError):
                 pass
-        reviews_locator = card.locator("span.a-size-base.s-underline-text")
-        reviews_text = (await reviews_locator.first.text_content() or "").strip() if await reviews_locator.count() > 0 else ""
+        # 尝试多种选择器获取评论数 (Amazon页面结构经常变化)
         reviews_count = None
-        if reviews_text:
-            try:
-                reviews_count = int(reviews_text.replace(",", "").replace(".", ""))
-            except ValueError:
-                pass
+        reviews_selectors = [
+            "span.a-size-base.s-underline-text",  # 旧版选择器
+            "a[href*='customerReviews'] span.a-size-base",  # 评论链接中的数字
+            "span[aria-label*='stars'] + span.a-size-base",  # 星级后的数字
+            "div.a-row.a-size-small span:last-child",  # 评分行最后一个数字
+            "span.a-size-base.a-color-secondary",  # 次要颜色数字
+        ]
+        for selector in reviews_selectors:
+            reviews_locator = card.locator(selector)
+            if await reviews_locator.count() > 0:
+                reviews_text = (await reviews_locator.first.text_content() or "").strip()
+                # 过滤掉评分数字 (通常带小数点，评论数是整数)
+                if reviews_text and "." not in reviews_text:
+                    try:
+                        # 移除千位分隔符
+                        clean_text = reviews_text.replace(",", "").replace(".", "").replace("(", "").replace(")", "")
+                        reviews_count = int(clean_text)
+                        if reviews_count >= 0:  # 有效评论数
+                            break
+                    except ValueError:
+                        continue
+        # 如果以上选择器都失败，尝试从 aria-label 提取
+        if reviews_count is None:
+            rating_container = card.locator("i.a-icon-star-small, span.a-icon-alt")
+            if await rating_container.count() > 0:
+                aria_label = await rating_container.first.get_attribute("aria-label") or ""
+                # aria-label 格式通常是 "4.5 out of 5 stars. 1,234 ratings"
+                if "rating" in aria_label.lower():
+                    parts = aria_label.split()
+                    for i, part in enumerate(parts):
+                        if part.lower() in ["ratings", "rating", "reviews", "review"]:
+                            if i > 0:
+                                try:
+                                    reviews_count = int(parts[i-1].replace(",", "").replace(".", ""))
+                                    break
+                                except (ValueError, IndexError):
+                                    pass
         is_prime = await card.locator('i.a-icon.a-icon-prime, span[data-component-type="s-prime"]').count() > 0
         brand = (await card.get_attribute("data-brand") or "").strip()
         if not brand:
@@ -222,6 +260,12 @@ async def _scrape_keyword(
     total_collected, page_index = 0, 1
     while total_collected < max_items and page_index <= max_pages:
         page = await context.new_page()
+        
+        # Apply stealth mode to avoid bot detection
+        if HAS_STEALTH:
+            await stealth_async(page)
+            log.info("Stealth mode applied")
+        
         try:
             for attempt in range(1, 4):
                 try:
@@ -232,12 +276,37 @@ async def _scrape_keyword(
                     if attempt == 3:
                         raise
                     await page.wait_for_timeout(int(random.uniform(1_000, 3_000) * attempt))
-            html_lower = (await page.content()).lower()
-            if any(m in html_lower for m in ("api-services-support@amazon.com", "to discuss automated access to amazon data", "/captcha/", "enter the characters you see below")):
-                log.warning("Bot/CAPTCHA page detected, skipping keyword.")
+            html_content = await page.content()
+            html_lower = html_content.lower()
+            
+            # Check for bot detection
+            bot_indicators = ["api-services-support@amazon.com", "to discuss automated access to amazon data", "/captcha/", "enter the characters you see below", "robot check", "something went wrong"]
+            detected_indicators = [m for m in bot_indicators if m in html_lower]
+            if detected_indicators:
+                log.warning(f"Bot/CAPTCHA indicators detected: {detected_indicators}")
                 break
+            
+            # Log page title for debugging
+            page_title = await page.title()
+            log.info(f"Page title: {page_title}")
+            
+            # Try multiple selectors for product cards
             cards = await page.locator('div.s-main-slot div[data-component-type="s-search-result"]').all()
+            if not cards:
+                # Try alternative selector
+                cards = await page.locator('div[data-component-type="s-search-result"]').all()
+                log.info("Trying alternative selector: div[data-component-type='s-search-result']")
+            if not cards:
+                # Try another alternative
+                cards = await page.locator('.s-result-item[data-asin]').all()
+                log.info("Trying alternative selector: .s-result-item[data-asin]")
+            
             log.info(f"Found {len(cards)} cards on page {page_index}")
+            
+            # If still no cards, log some page content for debugging
+            if not cards:
+                log.warning("No product cards found. Page content preview:")
+                log.warning(html_content[:2000] if len(html_content) > 2000 else html_content)
             if not cards:
                 break
             remaining = max_items - total_collected
