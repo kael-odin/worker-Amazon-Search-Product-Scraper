@@ -264,26 +264,62 @@ async def _scrape_keyword(
         # Apply stealth mode to avoid bot detection
         if HAS_STEALTH:
             await stealth_async(page)
-            log.info("Stealth mode applied")
+            log.info("Stealth mode applied via playwright-stealth")
+        else:
+            log.warning("playwright-stealth not installed, bot detection may occur")
+        
+        # Bot detection retry loop
+        max_retries = 3
+        for retry in range(max_retries):
+            try:
+                for attempt in range(1, 4):
+                    try:
+                        # Use longer timeout and networkidle for better success
+                        wait_strategy = "load" if retry == 0 else "domcontentloaded"
+                        await page.goto(search_url, wait_until=wait_strategy, timeout=30_000)
+                        # Random delay to appear more human-like
+                        await page.wait_for_timeout(int(random.uniform(2_000, 4_000) + retry * 1_000))
+                        break
+                    except PlaywrightTimeoutError:
+                        if attempt == 3:
+                            raise
+                        await page.wait_for_timeout(int(random.uniform(2_000, 4_000) * attempt))
+                
+                html_content = await page.content()
+                html_lower = html_content.lower()
+                
+                # Check for bot detection
+                bot_indicators = ["api-services-support@amazon.com", "to discuss automated access to amazon data", "/captcha/", "enter the characters you see below", "robot check", "something went wrong", "type the characters"]
+                detected_indicators = [m for m in bot_indicators if m in html_lower]
+                
+                if detected_indicators:
+                    log.warning(f"Bot/CAPTCHA detected (retry {retry + 1}/{max_retries}): {detected_indicators}")
+                    if retry < max_retries - 1:
+                        # Wait longer before retry
+                        await page.wait_for_timeout(int(random.uniform(3_000, 5_000)))
+                        continue
+                    else:
+                        log.error("Max retries reached for bot detection")
+                        break
+                
+                # No bot detection, proceed
+                break
+                
+            except Exception as e:
+                log.warning(f"Retry {retry + 1}/{max_retries} failed: {e}")
+                if retry == max_retries - 1:
+                    raise
+                await page.wait_for_timeout(int(random.uniform(2_000, 4_000)))
         
         try:
-            for attempt in range(1, 4):
-                try:
-                    await page.goto(search_url, wait_until="domcontentloaded", timeout=20_000)
-                    await page.wait_for_timeout(2_000)
-                    break
-                except PlaywrightTimeoutError:
-                    if attempt == 3:
-                        raise
-                    await page.wait_for_timeout(int(random.uniform(1_000, 3_000) * attempt))
             html_content = await page.content()
             html_lower = html_content.lower()
             
-            # Check for bot detection
+            # Double check for bot detection after retries
             bot_indicators = ["api-services-support@amazon.com", "to discuss automated access to amazon data", "/captcha/", "enter the characters you see below", "robot check", "something went wrong"]
             detected_indicators = [m for m in bot_indicators if m in html_lower]
             if detected_indicators:
-                log.warning(f"Bot/CAPTCHA indicators detected: {detected_indicators}")
+                log.warning(f"Bot/CAPTCHA indicators still present: {detected_indicators}")
                 break
             
             # Log page title for debugging
